@@ -278,6 +278,7 @@ th {
   letter-spacing: 0.06em;
   padding: 10px 16px;
   border-bottom: 1px solid var(--border);
+  white-space: nowrap;
 }
 td { padding: 11px 16px; border-bottom: 1px solid var(--border); font-size: var(--text-base); }
 tr:last-child td { border-bottom: none; }
@@ -647,6 +648,10 @@ tr:hover td { background: var(--bg); }
   .filter-row   { flex-wrap: wrap; }
   .topbar       { padding: 14px 16px; flex-direction: column; align-items: flex-start; gap: 10px; }
   .login-card   { padding: 36px 24px; }
+  /* Hide date pickers on mobile — they render as blank boxes and waste space */
+  .date-filter  { display: none !important; }
+  /* Hide lower-priority table columns on mobile */
+  .col-card, .col-matched { display: none; }
 }
 @media (max-width: 480px) {
   .stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -1175,8 +1180,10 @@ function TransactionsTab({ cycles, activeCycle }) {
             <input placeholder="Merchant or ₹amount…" value={search} onChange={e => setSearch(e.target.value)}/>
           </div>
           <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} title="From date"
+            className="date-filter"
             style={{padding:"8px 10px",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",fontSize:"var(--text-base)",fontFamily:"inherit",background:"var(--card)",outline:"none",color:"var(--text)"}}/>
           <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} title="To date"
+            className="date-filter"
             style={{padding:"8px 10px",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",fontSize:"var(--text-base)",fontFamily:"inherit",background:"var(--card)",outline:"none",color:"var(--text)"}}/>
         </>}
         {tab === "transfers" && (
@@ -1200,10 +1207,10 @@ function TransactionsTab({ cycles, activeCycle }) {
                   <tr>
                     <th>Date & Time</th>
                     <th>Merchant</th>
-                    <th>Card</th>
+                    <th className="col-card">Card</th>
                     <th>Status</th>
                     <th style={{textAlign:"right"}}>Amount</th>
-                    <th>Matched Transfer</th>
+                    <th className="col-matched">Matched Transfer</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1214,14 +1221,14 @@ function TransactionsTab({ cycles, activeCycle }) {
                         {r.txnTime && <div style={{fontSize:"var(--text-xs)",color:"var(--text-3)"}}>{fmtTime(r.txnTime)}</div>}
                       </td>
                       <td style={{fontWeight:500}}>{r.merchant || "—"}</td>
-                      <td style={{color:"var(--text-2)"}}>••{r.card}</td>
+                      <td className="col-card" style={{color:"var(--text-2)"}}>••{r.card}</td>
                       <td>
                         <span className={`pill ${r.status==="Auto-Matched"?"pill-green":r.status==="Manually Matched"?"pill-blue":"pill-amber"}`}>
                           {r.status}
                         </span>
                       </td>
                       <td style={{textAlign:"right",fontWeight:600,fontVariantNumeric:"tabular-nums"}}>{fmt(r.txnAmount)}</td>
-                      <td style={{color:"var(--text-2)"}}>
+                      <td className="col-matched" style={{color:"var(--text-2)"}}>
                         {r.tfrDate ? `${fmtDate(r.tfrDate)} · ${fmt(r.tfrAmount)}` : "—"}
                       </td>
                     </tr>
