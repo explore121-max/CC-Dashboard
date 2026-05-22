@@ -701,7 +701,7 @@ async function authWithGoogle(idToken) {
 // ── Formatters ────────────────────────────────────────────────────────────────
 function fmt(n) {
   if (n == null || isNaN(n)) return "₹0";
-  return "₹" + Math.abs(n).toLocaleString("en-IN");
+  return "₹" + Math.round(Math.abs(n)).toLocaleString("en-IN");
 }
 function fmtDate(d) {
   if (!d) return "—";
