@@ -662,8 +662,8 @@ tr:hover td { background: var(--bg); }
 const { useState, useEffect, useCallback, useRef } = React;
 
 // ── API layer ─────────────────────────────────────────────────────────────────
-// Session token is held in module scope (cleared on page refresh = re-login)
-let _sessionToken = null;
+// Session token — persisted in localStorage so refresh doesn't require re-login
+let _sessionToken = localStorage.getItem("cc-session") || null;
 
 async function api(action, params = {}) {
   const body = JSON.stringify({
@@ -681,7 +681,9 @@ async function api(action, params = {}) {
   const data = await res.json();
   if (data.error === "Session expired — please sign in again.") {
     _sessionToken = null;
-    window.location.reload(); // force re-login
+    localStorage.removeItem("cc-session");
+    localStorage.removeItem("cc-email");
+    window.location.reload();
   }
   return data;
 }
@@ -916,6 +918,8 @@ function LoginScreen({ onSuccess }) {
       const res = await authWithGoogle(credential);
       if (res.success) {
         _sessionToken = res.sessionToken;
+        localStorage.setItem("cc-session", res.sessionToken);
+        localStorage.setItem("cc-email", res.email);
         onSuccess(res.email);
       } else {
         setError(res.error || "Sign-in failed. Please try again.");
@@ -1508,7 +1512,7 @@ function BottomNav({ tabs, active, onChange }) {
 
 // ── App ───────────────────────────────────────────────────────────────────────
 function App() {
-  const [userEmail,   setUserEmail]   = useState(null);
+  const [userEmail,   setUserEmail]   = useState(() => localStorage.getItem("cc-email") || null);
   const [tab,         setTab]         = useState("dashboard");
   const [cycles,      setCycles]      = useState(null);
   const [activeCycle, setActiveCycle] = useState(null);
@@ -1532,6 +1536,8 @@ function App() {
 
   function logout() {
     _sessionToken = null;
+    localStorage.removeItem("cc-session");
+    localStorage.removeItem("cc-email");
     setUserEmail(null); setCycles(null); setActiveCycle(null); setTab("dashboard");
     setTimeout(() => {
       if (window.google?.accounts?.id) window.google.accounts.id.prompt();
