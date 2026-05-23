@@ -1061,9 +1061,24 @@ function DashboardSkeleton() {
 }
 
 // ── Dashboard Carousel ────────────────────────────────────────────────────────
-function DashboardCarousel({ cycleData }) {
+function DashboardCarousel({ cycleData, userEmail }) {
+  const SPOORTHI = "spoorthi1299@gmail.com";
+  const defaultSlide = userEmail === SPOORTHI
+    ? 1 + CARDS.findIndex(c => c.id === "6340")
+    : 0;
   const trackRef = useRef(null);
-  const [activeSlide, setActiveSlide] = useState(0);
+  const [activeSlide, setActiveSlide] = useState(defaultSlide);
+
+  // Scroll to the default slide instantly after mount (no animation)
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || defaultSlide === 0) return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        track.scrollLeft = defaultSlide * track.offsetWidth;
+      });
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const track = trackRef.current;
@@ -1144,7 +1159,7 @@ function DashboardCarousel({ cycleData }) {
 }
 
 // ── Dashboard Tab ─────────────────────────────────────────────────────────────
-function DashboardTab({ cycles, activeCycle }) {
+function DashboardTab({ cycles, activeCycle, userEmail }) {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const load = useCallback(() => {
@@ -1172,7 +1187,7 @@ function DashboardTab({ cycles, activeCycle }) {
 
   return (
     <div style={{animation:"fadeIn 0.2s ease"}}>
-      <DashboardCarousel cycleData={cycleData}/>
+      <DashboardCarousel cycleData={cycleData} userEmail={userEmail}/>
 
       <div className="card card-p" style={{
         background: isOk ? "var(--green-bg)" : "var(--amber-bg)",
@@ -1618,6 +1633,12 @@ function App() {
     });
   }, [userEmail]);
 
+  // Set default card filter based on who's logged in
+  useEffect(() => {
+    if (!userEmail) return;
+    setCardFilter(userEmail === "spoorthi1299@gmail.com" ? "6340" : "all");
+  }, [userEmail]);
+
   function logout() {
     _sessionToken = null;
     localStorage.removeItem("cc-session");
@@ -1690,7 +1711,7 @@ function App() {
           </div>
         </div>
         <div className="content">
-          {tab==="dashboard"    && <ErrorBoundary key="db"><DashboardTab    cycles={cycles} activeCycle={activeCycle}/></ErrorBoundary>}
+          {tab==="dashboard"    && <ErrorBoundary key="db"><DashboardTab    cycles={cycles} activeCycle={activeCycle} userEmail={userEmail}/></ErrorBoundary>}
           {tab==="transactions" && <ErrorBoundary key="tx"><TransactionsTab cycles={cycles} activeCycle={activeCycle} cardFilter={cardFilter}/></ErrorBoundary>}
           {tab==="reconcile"   && <ErrorBoundary key="rc"><ReconcileTab    activeCycle={activeCycle} addToast={addToast}/></ErrorBoundary>}
         </div>
