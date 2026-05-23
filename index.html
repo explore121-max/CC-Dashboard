@@ -652,6 +652,10 @@ tr:hover td { background: var(--bg); }
   .date-filter  { display: none !important; }
   /* Hide lower-priority table columns on mobile */
   .col-card, .col-matched { display: none; }
+  /* Stretch title row so card filter button aligns to the right edge */
+  .topbar-left { width: 100%; }
+  /* Give last table column breathing room from the screen edge */
+  table td:last-child, table th:last-child { padding-right: 20px; }
 }
 
 /* ── STATUS DOT ──────────────────────────────────────────────────────────────── */
@@ -702,24 +706,27 @@ tr:hover td { background: var(--bg); }
 .carousel-dot.active { width: 18px; background: var(--accent); }
 
 /* ── CARD FILTER BUTTON ──────────────────────────────────────────────────────── */
+.topbar-left { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .card-filter-btn {
-  width: 36px; height: 36px;
+  width: 44px; height: 44px;
   border-radius: 50%;
   border: 2px solid var(--border);
   background: var(--bg);
   color: var(--text);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   font-family: inherit;
   display: flex; align-items: center; justify-content: center;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
   flex-shrink: 0;
+  box-shadow: 0 0 0 4px var(--accent-light);
 }
 .card-filter-btn.active {
   background: var(--accent);
   border-color: var(--accent);
   color: white;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2);
 }
 
 @media (max-width: 480px) {
@@ -1660,12 +1667,11 @@ function App() {
       {/* Main */}
       <div className="main">
         <div className="topbar">
-          <div>
-            <div className="topbar-title">{TABS.find(t => t.id===tab)?.label}</div>
-            {activeCycle && <div className="topbar-sub">{activeCycle}</div>}
-          </div>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
-            {cycles && <CycleToggle cycles={cycles} active={activeCycle} onChange={setActiveCycle}/>}
+          <div className="topbar-left">
+            <div>
+              <div className="topbar-title">{TABS.find(t => t.id===tab)?.label}</div>
+              {activeCycle && <div className="topbar-sub">{activeCycle}</div>}
+            </div>
             {tab === "transactions" && (
               <button
                 className={`card-filter-btn ${cardFilter !== "all" ? "active" : ""}`}
@@ -1675,6 +1681,9 @@ function App() {
                 {cardFilter === "all" ? "All" : cardFilter === "2179" ? "R" : "S"}
               </button>
             )}
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            {cycles && <CycleToggle cycles={cycles} active={activeCycle} onChange={setActiveCycle}/>}
             <button className="theme-toggle" onClick={() => setDarkMode(d => !d)} title={darkMode?"Switch to light mode":"Switch to dark mode"}>
               <Icon name={darkMode ? "sun" : "moon"} size={16}/>
             </button>
