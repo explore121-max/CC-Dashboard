@@ -672,7 +672,56 @@ tr:hover td { background: var(--bg); }
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+
+/* ── CAROUSEL ────────────────────────────────────────────────────────────────── */
+.carousel-wrap { overflow: hidden; margin-bottom: 4px; }
+.carousel-track {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
 }
+.carousel-track::-webkit-scrollbar { display: none; }
+.carousel-slide { min-width: 100%; scroll-snap-align: start; }
+.carousel-slide-label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: 10px;
+}
+.carousel-dots { display: flex; justify-content: center; gap: 6px; margin: 8px 0 20px; }
+.carousel-dot {
+  width: 6px; height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  border: none; padding: 0; cursor: pointer;
+  transition: background 0.2s, width 0.2s;
+}
+.carousel-dot.active { width: 18px; background: var(--accent); }
+
+/* ── CARD FILTER BUTTON ──────────────────────────────────────────────────────── */
+.card-filter-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: inherit;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.card-filter-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
 @media (max-width: 480px) {
   .stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
   .match-group-body { grid-template-columns: 1fr; }
@@ -985,7 +1034,7 @@ function DashboardSkeleton() {
   const sk = { display:"block", marginBottom:8 };
   return (
     <div>
-      <div className="stat-grid">
+      <div className="stat-grid" style={{marginBottom:4}}>
         {[0,1,2,3].map(i => (
           <div key={i} className="stat-card">
             <div className="skel" style={{...sk,height:10,width:"50%"}}/>
@@ -994,30 +1043,96 @@ function DashboardSkeleton() {
           </div>
         ))}
       </div>
-      <div className="skel" style={{height:13,width:60,marginBottom:14}}/>
-      <div className="card-row">
-        {[0,1].map(i => (
-          <div key={i} className="stat-card">
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-              <div>
-                <div className="skel" style={{...sk,height:15,width:100}}/>
-                <div className="skel" style={{height:10,width:60}}/>
-              </div>
-              <div className="skel" style={{height:22,width:90,borderRadius:100}}/>
-            </div>
-            <div style={{display:"flex",gap:20}}>
-              {[0,1].map(j => (
-                <div key={j}>
-                  <div className="skel" style={{...sk,height:10,width:44}}/>
-                  <div className="skel" style={{height:20,width:64}}/>
-                </div>
-              ))}
-            </div>
-          </div>
+      <div style={{display:"flex",justifyContent:"center",gap:6,margin:"8px 0 20px"}}>
+        {[0,1,2].map(i => (
+          <div key={i} className="skel" style={{width:i===0?18:6,height:6,borderRadius:3}}/>
         ))}
       </div>
       <div className="skel" style={{height:64,borderRadius:12}}/>
     </div>
+  );
+}
+
+// ── Dashboard Carousel ────────────────────────────────────────────────────────
+function DashboardCarousel({ cycleData }) {
+  const trackRef = useRef(null);
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    const onScroll = () => {
+      const w = track.offsetWidth;
+      if (!w) return;
+      setActiveSlide(Math.round(track.scrollLeft / w));
+    };
+    track.addEventListener("scroll", onScroll, { passive: true });
+    return () => track.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const goTo = i => {
+    const track = trackRef.current;
+    if (!track) return;
+    track.scrollTo({ left: i * track.offsetWidth, behavior: "smooth" });
+  };
+
+  const txnCount = Object.values(cycleData.byCard || {}).reduce((n, c) => n + (c.count || 0), 0);
+
+  const slides = [
+    {
+      title: null,
+      stats: [
+        { label: "Total Spend",        value: fmt(cycleData.totalSpend),           sub: `${txnCount} transaction${txnCount !== 1 ? "s" : ""}`,                                                                             color: "" },
+        { label: "Transferred",         value: fmt(cycleData.totalTransferred),     sub: "to savings ••2395",                                                                                                               color: "green" },
+        { label: "Unmatched Spend",     value: fmt(cycleData.totalUnmatched),       sub: `${cycleData.unmatchedCount} item${cycleData.unmatchedCount !== 1 ? "s" : ""}`,                                                    color: cycleData.totalUnmatched > 0 ? "red" : "green" },
+        { label: "Unmatched Transfers", value: fmt(cycleData.unmatchedTransferAmt), sub: `${cycleData.unmatchedTransferCount} transfer${cycleData.unmatchedTransferCount !== 1 ? "s" : ""}`,                                color: cycleData.unmatchedTransferCount > 0 ? "amber" : "green" },
+      ],
+    },
+    ...CARDS.map(({ id: card, label: cardLabel }) => {
+      const c = cycleData.byCard?.[card] || {};
+      const coverage = c.spend ? Math.round((c.matched || 0) / c.spend * 100) : 100;
+      return {
+        title: cardLabel,
+        stats: [
+          { label: "Spend",     value: fmt(c.spend),          sub: `${c.count || 0} transaction${(c.count || 0) !== 1 ? "s" : ""}`,                     color: "" },
+          { label: "Matched",   value: fmt(c.matched),         sub: "",                                                                                    color: "green" },
+          { label: "Unmatched", value: fmt(c.unmatched || 0),  sub: `${c.unmatchedCount || 0} item${(c.unmatchedCount || 0) !== 1 ? "s" : ""}`,           color: (c.unmatchedCount || 0) > 0 ? "red" : "green" },
+          { label: "Coverage",  value: c.spend ? coverage + "%" : "—", sub: "of spend matched",                                                           color: coverage === 100 ? "green" : "amber" },
+        ],
+      };
+    }),
+  ];
+
+  return (
+    <>
+      <div className="carousel-wrap">
+        <div className="carousel-track" ref={trackRef}>
+          {slides.map((slide, i) => (
+            <div key={i} className="carousel-slide">
+              {slide.title && <div className="carousel-slide-label">{slide.title}</div>}
+              <div className="stat-grid">
+                {slide.stats.map((s, j) => (
+                  <div key={j} className="stat-card">
+                    <div className="stat-label">{s.label}</div>
+                    <div className={`stat-value ${s.color}`}>{s.value}</div>
+                    {s.sub && <div className="stat-sub">{s.sub}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="carousel-dots">
+        {slides.map((slide, i) => (
+          <button key={i}
+            className={`carousel-dot ${activeSlide === i ? "active" : ""}`}
+            onClick={() => goTo(i)}
+            title={i === 0 ? "Combined" : slide.title}
+          />
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -1046,72 +1161,11 @@ function DashboardTab({ cycles, activeCycle }) {
     </div>
   );
 
-  const isOk     = cycleData.totalUnmatched === 0;
-  const gapColor = cycleData.totalUnmatched > 0 ? "red" : "green";
-  const txnCount = Object.values(cycleData.byCard || {}).reduce((n, c) => n + (c.count || 0), 0);
+  const isOk = cycleData.totalUnmatched === 0;
 
   return (
     <div style={{animation:"fadeIn 0.2s ease"}}>
-      <div className="stat-grid">
-        <div className="stat-card">
-          <div className="stat-label">Total Spend</div>
-          <div className="stat-value">{fmt(cycleData.totalSpend)}</div>
-          <div className="stat-sub">{txnCount} transaction{txnCount !== 1 ? "s" : ""}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Transferred</div>
-          <div className="stat-value green">{fmt(cycleData.totalTransferred)}</div>
-          <div className="stat-sub">to savings ••2395</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Unmatched Spend</div>
-          <div className={`stat-value ${gapColor}`}>{fmt(cycleData.totalUnmatched)}</div>
-          <div className="stat-sub">{cycleData.unmatchedCount} item{cycleData.unmatchedCount !== 1 ? "s" : ""}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Unmatched Transfers</div>
-          <div className={`stat-value ${cycleData.unmatchedTransferCount > 0 ? "amber" : "green"}`}>
-            {fmt(cycleData.unmatchedTransferAmt)}
-          </div>
-          <div className="stat-sub">{cycleData.unmatchedTransferCount} transfer{cycleData.unmatchedTransferCount !== 1 ? "s" : ""}</div>
-        </div>
-      </div>
-
-      <div className="section-title">By Card</div>
-      <div className="card-row">
-        {CARDS.map(({ id: card, label: cardLabel }) => {
-          const c = cycleData.byCard?.[card] || {};
-          return (
-            <div key={card} className="stat-card">
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-                <div>
-                  <div style={{fontWeight:700,fontSize:15,letterSpacing:"-0.01em"}}>{cardLabel}</div>
-                  <div style={{fontSize:11,color:"var(--text-3)",marginTop:2}}>{c.count || 0} transactions</div>
-                </div>
-                <div className={`pill ${c.unmatchedCount > 0 ? "pill-amber" : "pill-green"}`}>
-                  {c.unmatchedCount > 0 ? `${c.unmatchedCount} unmatched` : "All matched"}
-                </div>
-              </div>
-              <div style={{display:"flex",gap:24}}>
-                <div>
-                  <div className="stat-label">Spend</div>
-                  <div style={{fontWeight:700,fontSize:16}}>{fmt(c.spend)}</div>
-                </div>
-                <div>
-                  <div className="stat-label">Matched</div>
-                  <div style={{fontWeight:700,fontSize:16,color:"var(--green)"}}>{fmt(c.matched)}</div>
-                </div>
-                {c.unmatched > 0 && (
-                  <div>
-                    <div className="stat-label">Unmatched</div>
-                    <div style={{fontWeight:700,fontSize:16,color:"var(--red)"}}>{fmt(c.unmatched)}</div>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <DashboardCarousel cycleData={cycleData}/>
 
       <div className="card card-p" style={{
         background: isOk ? "var(--green-bg)" : "var(--amber-bg)",
@@ -1135,10 +1189,9 @@ function DashboardTab({ cycles, activeCycle }) {
 }
 
 // ── Transactions Tab ──────────────────────────────────────────────────────────
-function TransactionsTab({ cycles, activeCycle }) {
+function TransactionsTab({ cycles, activeCycle, cardFilter }) {
   const [tab,            setTab]            = useState("spends");
   const [filter,         setFilter]         = useState("all");
-  const [cardFilter,     setCardFilter]     = useState("all");
   const [search,         setSearch]         = useState("");
   const [transferSearch, setTransferSearch] = useState("");
   const [dateFrom,       setDateFrom]       = useState("");
@@ -1188,12 +1241,6 @@ function TransactionsTab({ cycles, activeCycle }) {
           <div className="seg">
             <button className={`seg-btn ${filter==="all"?"active":""}`} onClick={() => setFilter("all")}>All</button>
             <button className={`seg-btn ${filter==="unmatched"?"active":""}`} onClick={() => setFilter("unmatched")}>Unmatched</button>
-          </div>
-          <div className="seg">
-            <button className={`seg-btn ${cardFilter==="all"?"active":""}`} onClick={() => setCardFilter("all")}>All cards</button>
-            {CARDS.map(({ id }) => (
-              <button key={id} className={`seg-btn ${cardFilter===id?"active":""}`} onClick={() => setCardFilter(id)}>••{id}</button>
-            ))}
           </div>
           <div className="search-wrap">
             <span className="search-icon"><Icon name="search" size={15}/></span>
@@ -1545,6 +1592,7 @@ function App() {
   const [tab,         setTab]         = useState("dashboard");
   const [cycles,      setCycles]      = useState(null);
   const [activeCycle, setActiveCycle] = useState(null);
+  const [cardFilter,  setCardFilter]  = useState("all");
   const [darkMode,    setDarkMode]    = useState(() => {
     return localStorage.getItem("cc-theme") === "dark";
   });
@@ -1618,6 +1666,15 @@ function App() {
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             {cycles && <CycleToggle cycles={cycles} active={activeCycle} onChange={setActiveCycle}/>}
+            {tab === "transactions" && (
+              <button
+                className={`card-filter-btn ${cardFilter !== "all" ? "active" : ""}`}
+                onClick={() => setCardFilter(f => f === "all" ? "2179" : f === "2179" ? "6340" : "all")}
+                title={cardFilter === "all" ? "All cards — tap to filter" : cardFilter === "2179" ? "••2179 (R) — tap for ••6340" : "••6340 (S) — tap for All"}
+              >
+                {cardFilter === "all" ? "All" : cardFilter === "2179" ? "R" : "S"}
+              </button>
+            )}
             <button className="theme-toggle" onClick={() => setDarkMode(d => !d)} title={darkMode?"Switch to light mode":"Switch to dark mode"}>
               <Icon name={darkMode ? "sun" : "moon"} size={16}/>
             </button>
@@ -1625,7 +1682,7 @@ function App() {
         </div>
         <div className="content">
           {tab==="dashboard"    && <ErrorBoundary key="db"><DashboardTab    cycles={cycles} activeCycle={activeCycle}/></ErrorBoundary>}
-          {tab==="transactions" && <ErrorBoundary key="tx"><TransactionsTab cycles={cycles} activeCycle={activeCycle}/></ErrorBoundary>}
+          {tab==="transactions" && <ErrorBoundary key="tx"><TransactionsTab cycles={cycles} activeCycle={activeCycle} cardFilter={cardFilter}/></ErrorBoundary>}
           {tab==="reconcile"   && <ErrorBoundary key="rc"><ReconcileTab    activeCycle={activeCycle} addToast={addToast}/></ErrorBoundary>}
         </div>
       </div>
