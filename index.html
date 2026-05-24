@@ -1056,7 +1056,30 @@ function ItemDetailPanel({ item, notesMap, onClose, onNoteSaved, onToggleSelect,
           <button className="detail-close" onClick={onClose}>✕</button>
         </div>
 
-        <div className="detail-meta">
+        {/* Note first — visible without scrolling */}
+        <div className="detail-note-label">📝 Note</div>
+        <textarea
+          className="detail-textarea"
+          value={noteText}
+          onChange={e => setNoteText(e.target.value)}
+          placeholder="Add a note about this transaction…"
+          rows={3}
+          autoFocus
+        />
+        <div className="detail-actions">
+          {saveMsg && (
+            <span style={{flex:1, fontSize:"var(--text-sm)", color: saveMsg.startsWith("Error") ? "var(--red)" : "var(--green)"}}>
+              {saveMsg}
+            </span>
+          )}
+          <button className="btn btn-ghost" onClick={onClose}>Close</button>
+          <button className="btn btn-primary" disabled={saving} onClick={handleSave}>
+            {saving ? <span style={{display:"flex",alignItems:"center",gap:8}}><div className="spinner-sm"/>Saving…</span> : "Save Note"}
+          </button>
+        </div>
+
+        {/* Transaction details and linking below the note */}
+        <div className="detail-meta" style={{marginTop:18}}>
           <div className="detail-field">
             <div className="detail-field-label">Amount</div>
             <div className="detail-field-value">{fmt(item.amount)}</div>
@@ -1093,27 +1116,6 @@ function ItemDetailPanel({ item, notesMap, onClose, onNoteSaved, onToggleSelect,
             {isSelected ? "✓ Selected for Linking" : "Select for Linking"}
           </button>
         )}
-
-        <div className="detail-note-label">📝 Note</div>
-        <textarea
-          className="detail-textarea"
-          value={noteText}
-          onChange={e => setNoteText(e.target.value)}
-          placeholder="Add a note about this transaction…"
-          rows={3}
-          autoFocus
-        />
-        <div className="detail-actions">
-          {saveMsg && (
-            <span style={{flex:1, fontSize:"var(--text-sm)", color: saveMsg.startsWith("Error") ? "var(--red)" : "var(--green)"}}>
-              {saveMsg}
-            </span>
-          )}
-          <button className="btn btn-ghost" onClick={onClose}>Close</button>
-          <button className="btn btn-primary" disabled={saving} onClick={handleSave}>
-            {saving ? <span style={{display:"flex",alignItems:"center",gap:8}}><div className="spinner-sm"/>Saving…</span> : "Save Note"}
-          </button>
-        </div>
       </div>
     </div>
   );
